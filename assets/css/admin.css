@@ -1,0 +1,254 @@
+/**
+ * Admin Page Styles
+ *
+ * @package PAC_Vehicle_Data_Manager
+ */
+
+/* Main Container */
+.pac-vdm-settings {
+    max-width: 1400px;
+}
+
+.pac-vdm-settings h1 {
+    margin-bottom: 20px;
+}
+
+/* Tabs */
+.pac-vdm-settings .nav-tab-wrapper {
+    margin-bottom: 0;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+.pac-vdm-settings .tab-content {
+    display: none;
+    background: #fff;
+    padding: 30px;
+    border: 1px solid #ccd0d4;
+    border-top: 0;
+    min-height: 400px;
+}
+
+.pac-vdm-settings .tab-content.active {
+    display: block;
+}
+
+/* Tab Header */
+.tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.tab-header .description {
+    flex: 1;
+    margin: 0;
+    min-width: 300px;
+}
+
+.tab-header .description p {
+    margin: 0;
+    color: #646970;
+}
+
+/* Mappings Table */
+#mappings-table {
+    margin-top: 10px;
+}
+
+#mappings-table th,
+#mappings-table td {
+    vertical-align: middle;
+}
+
+#mappings-table select {
+    width: 100%;
+    max-width: 180px;
+}
+
+#mappings-table .row-number {
+    text-align: center;
+    font-weight: 600;
+    color: #646970;
+}
+
+.no-mappings-row td {
+    text-align: center;
+}
+
+.mapping-row:hover {
+    background: #f9f9f9;
+}
+
+/* Button Styles */
+.button .dashicons {
+    vertical-align: middle;
+    margin-right: 5px;
+    margin-top: -2px;
+}
+
+.button-hero {
+    padding: 12px 24px !important;
+    height: auto !important;
+    font-size: 14px !important;
+}
+
+.button-hero .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+}
+
+/* Delete button */
+.delete-mapping-btn {
+    color: #a00;
+}
+
+.delete-mapping-btn:hover {
+    color: #dc3232;
+    border-color: #dc3232;
+}
+
+.delete-mapping-btn .dashicons {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+
+/* Spinner */
+.spinner.is-active {
+    visibility: visible;
+    margin: 0;
+}
+
+/* Messages */
+.message,
+#save-mappings-message,
+#year-expander-message,
+#debug-settings-message,
+#log-message {
+    font-weight: 600;
+}
+
+.message.success,
+.success {
+    color: #46b450;
+}
+
+.message.error,
+.error {
+    color: #dc3232;
+}
+
+/* Form Table Styling */
+.pac-vdm-settings .form-table th {
+    width: 200px;
+    padding-left: 0;
+}
+
+.pac-vdm-settings .form-table td {
+    padding-left: 0;
+}
+
+.pac-vdm-settings .form-table select.regular-text {
+    width: 300px;
+    max-width: 100%;
+}
+
+/* Year Expander Tab */
+#tab-year-expander .form-table {
+    margin-top: 20px;
+}
+
+/* Debug Tab */
+#tab-debug h3 {
+    margin-top: 0;
+}
+
+#tab-debug hr {
+    margin: 30px 0;
+    border-color: #dcdcde;
+}
+
+/* Log Viewer */
+#log-viewer {
+    margin-top: 20px;
+}
+
+#log-contents {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    border-radius: 4px;
+    max-height: 500px;
+    overflow: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Utility Classes */
+code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+}
+
+/* Loading State */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .tab-header {
+        flex-direction: column;
+    }
+    
+    #mappings-table select {
+        max-width: 100%;
+    }
+    
+    .pac-vdm-settings .form-table th {
+        width: auto;
+    }
+}
+
+/* Notices */
+.pac-vdm-settings .notice {
+    margin: 15px 0;
+}
+
+/* Direction and UI Behavior columns */
+.direction-select,
+.ui-behavior-select {
+    min-width: 90px !important;
+}
+
+/* Actions Column */
+#mappings-table td:last-child {
+    text-align: center;
+}
+
+/* Alternating row colors for readability */
+#mappings-table tbody tr:nth-child(odd) {
+    background: #f9f9f9;
+}
+
+#mappings-table tbody tr:nth-child(even) {
+    background: #fff;
+}
+
+#mappings-table tbody tr.no-mappings-row {
+    background: #fff;
+}
+
