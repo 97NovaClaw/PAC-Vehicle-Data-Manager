@@ -50,13 +50,19 @@ function pac_vdm_is_notices_enabled() {
 /**
  * Write to plugin debug log
  *
+ * FIXED: Always log critical plugin lifecycle events regardless of settings.
+ * Only skip verbose logs when debug is disabled.
+ *
  * @param string $message The log message
  * @param mixed  $data    Optional data to include (will be JSON encoded if array/object)
- * @param string $level   Log level: 'info', 'warning', 'error', 'debug'
+ * @param string $level   Log level: 'info', 'warning', 'error', 'critical'
  */
 function pac_vdm_debug_log($message, $data = null, $level = 'info') {
-    // Only log if debug is enabled
-    if (!pac_vdm_is_debug_enabled()) {
+    // FIXED: Always log errors, warnings, and critical events
+    // Only skip 'info' level logs when debug is disabled
+    $is_critical = in_array($level, ['error', 'warning', 'critical']);
+    
+    if (!$is_critical && !pac_vdm_is_debug_enabled()) {
         return;
     }
     

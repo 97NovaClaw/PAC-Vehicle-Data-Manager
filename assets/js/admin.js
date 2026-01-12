@@ -25,41 +25,48 @@
             
             this.config = pacVdmAdmin;
             
+            console.log('[PAC VDM Admin] Initializing...', this.config);
+            
             this.bindEvents();
             this.initTabs();
             this.loadExistingMappings();
             this.loadYearExpanderSettings();
+            
+            console.log('[PAC VDM Admin] Initialization complete');
         },
         
         /**
          * Bind event handlers
+         * 
+         * FIXED: Using delegated event handlers for ALL buttons to ensure they work
+         * even when tab content is loaded dynamically or hidden initially
          */
         bindEvents: function() {
             // Tab switching
-            $('.pac-vdm-settings .nav-tab').on('click', this.handleTabClick.bind(this));
+            $(document).on('click', '.pac-vdm-settings .nav-tab', this.handleTabClick.bind(this));
             
-            // Setup Wizard
-            $('#save-cct-mapping-btn').on('click', this.saveCctMapping.bind(this));
+            // Setup Wizard - DELEGATED event handlers (content may not be in DOM yet)
+            $(document).on('click', '#save-cct-mapping-btn', this.saveCctMapping.bind(this));
             $(document).on('click', '.add-missing-fields-btn', this.addMissingFields.bind(this));
             $(document).on('click', '.create-relation-btn', this.createRelation.bind(this));
-            $('#create-all-relations-btn').on('click', this.createAllRelations.bind(this));
-            $('#auto-create-mappings-btn').on('click', this.autoCreateMappings.bind(this));
+            $(document).on('click', '#create-all-relations-btn', this.createAllRelations.bind(this));
+            $(document).on('click', '#auto-create-mappings-btn', this.autoCreateMappings.bind(this));
             
-            // Mappings
-            $('#add-mapping-btn').on('click', this.addMappingRow.bind(this));
-            $('#save-mappings-btn').on('click', this.saveMappings.bind(this));
+            // Mappings - DELEGATED
+            $(document).on('click', '#add-mapping-btn', this.addMappingRow.bind(this));
+            $(document).on('click', '#save-mappings-btn', this.saveMappings.bind(this));
             $(document).on('click', '.delete-mapping-btn', this.deleteMappingRow.bind(this));
             $(document).on('change', '.target-cct-select', this.handleTargetCctChange.bind(this));
             $(document).on('change', '.trigger-relation-select', this.handleRelationChange.bind(this));
             
-            // Year Expander
-            $('#year-target-cct').on('change', this.handleYearCctChange.bind(this));
-            $('#save-year-expander-btn').on('click', this.saveYearExpander.bind(this));
+            // Year Expander - DELEGATED
+            $(document).on('change', '#year-target-cct', this.handleYearCctChange.bind(this));
+            $(document).on('click', '#save-year-expander-btn', this.saveYearExpander.bind(this));
             
-            // Debug
-            $('#save-debug-settings-btn').on('click', this.saveDebugSettings.bind(this));
-            $('#view-log-btn, #refresh-log-btn').on('click', this.viewLog.bind(this));
-            $('#clear-log-btn').on('click', this.clearLog.bind(this));
+            // Debug - DELEGATED
+            $(document).on('click', '#save-debug-settings-btn', this.saveDebugSettings.bind(this));
+            $(document).on('click', '#view-log-btn, #refresh-log-btn', this.viewLog.bind(this));
+            $(document).on('click', '#clear-log-btn', this.clearLog.bind(this));
         },
         
         /**
@@ -640,6 +647,8 @@
         saveCctMapping: function(e) {
             e.preventDefault();
             
+            console.log('[PAC VDM Admin] Save CCT Mapping clicked');
+            
             const $btn = $('#save-cct-mapping-btn');
             const $spinner = $('#cct-mapping-spinner');
             const $message = $('#cct-mapping-message');
@@ -691,6 +700,8 @@
         addMissingFields: function(e) {
             e.preventDefault();
             
+            console.log('[PAC VDM Admin] Add missing fields clicked');
+            
             const $btn = $(e.currentTarget);
             const role = $btn.data('role');
             const slug = $btn.data('slug');
@@ -730,6 +741,8 @@
          */
         createRelation: function(e) {
             e.preventDefault();
+            
+            console.log('[PAC VDM Admin] Create relation clicked');
             
             const $btn = $(e.currentTarget);
             const parent = $btn.data('parent');
@@ -773,6 +786,8 @@
         createAllRelations: function(e) {
             e.preventDefault();
             
+            console.log('[PAC VDM Admin] Create all relations clicked');
+            
             const $btn = $('#create-all-relations-btn');
             const $spinner = $('#relations-spinner');
             const $message = $('#relations-message');
@@ -812,6 +827,8 @@
          */
         autoCreateMappings: function(e) {
             e.preventDefault();
+            
+            console.log('[PAC VDM Admin] Auto-create mappings clicked');
             
             const $btn = $('#auto-create-mappings-btn');
             const $spinner = $('#auto-mappings-spinner');

@@ -126,12 +126,19 @@ function pac_vdm_activate() {
     }
     
     // Initialize default debug options
+    // FIXED: Enable PHP logging by default so users can actually see what's happening
     if (!get_option(PAC_VDM_DEBUG_OPTION)) {
         update_option(PAC_VDM_DEBUG_OPTION, [
-            'enable_php_logging' => false,
+            'enable_php_logging' => true,  // ENABLED by default for troubleshooting
             'enable_js_console' => false,
             'enable_admin_notices' => false,
         ]);
+    }
+    
+    // Log activation
+    if (file_exists(PAC_VDM_PLUGIN_DIR . 'includes/helpers/debug.php')) {
+        require_once PAC_VDM_PLUGIN_DIR . 'includes/helpers/debug.php';
+        pac_vdm_debug_log('Plugin activated', ['version' => PAC_VDM_VERSION], 'critical');
     }
 }
 
@@ -198,7 +205,7 @@ function pac_vdm_init() {
         // Initialize plugin
         PAC_VDM_Plugin::instance();
         
-        pac_vdm_debug_log('Plugin initialized', ['version' => PAC_VDM_VERSION]);
+        pac_vdm_debug_log('Plugin initialized', ['version' => PAC_VDM_VERSION], 'critical');
         
     } catch (Throwable $e) {
         // Catch ALL errors including fatal ones (PHP 7.0+)
