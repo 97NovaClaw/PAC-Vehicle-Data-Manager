@@ -402,14 +402,27 @@ class PAC_VDM_CCT_Builder {
         pac_vdm_debug_log("Retrieved CCT data for editing", [
             'has_args' => isset($cct_data['args']),
             'has_fields' => isset($cct_data['args']['fields']),
-            'keys' => array_keys($cct_data)
+            'keys' => array_keys($cct_data),
+            'current_fields_in_args' => isset($cct_data['args']['fields']) ? $cct_data['args']['fields'] : 'NO FIELDS KEY'
         ]);
         
         // Update fields
         $cct_data['args']['fields'] = $all_fields;
         
+        pac_vdm_debug_log("About to save CCT with updated fields", [
+            'cct_data_keys' => array_keys($cct_data),
+            'args_keys' => array_keys($cct_data['args']),
+            'fields_count' => count($cct_data['args']['fields']),
+            'first_two_fields' => array_slice($cct_data['args']['fields'], 0, 2)
+        ]);
+        
         // Save updated CCT
         $update_result = $data_store->update_item_in_db($cct_data);
+        
+        pac_vdm_debug_log("update_item_in_db returned", [
+            'result' => $update_result,
+            'result_type' => gettype($update_result)
+        ]);
         
         if (!$update_result) {
             pac_vdm_debug_log("Failed to update CCT in database", [
