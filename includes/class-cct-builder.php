@@ -380,14 +380,20 @@ class PAC_VDM_CCT_Builder {
             return false;
         }
         
-        // CRITICAL FIX: get_item_for_edit requires the database ID, not type_id
-        // We need to get the proper item ID from the data store
-        $cct_data = $data_store->get_item_for_edit($content_type->_ID);
+        // CRITICAL FIX: Use type_id (cast to int) for database lookup
+        $db_id = absint($content_type->type_id);
+        
+        pac_vdm_debug_log("Attempting to get CCT data for editing", [
+            'type_id_raw' => $content_type->type_id,
+            'db_id_int' => $db_id
+        ]);
+        
+        $cct_data = $data_store->get_item_for_edit($db_id);
         
         if (!$cct_data) {
             pac_vdm_debug_log("Failed to get CCT data for editing", [
+                'db_id' => $db_id,
                 'type_id' => $content_type->type_id ?? 'N/A',
-                '_ID' => $content_type->_ID ?? 'N/A',
                 'available_properties' => array_keys(get_object_vars($content_type))
             ], 'error');
             return false;
