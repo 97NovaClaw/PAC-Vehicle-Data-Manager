@@ -29,7 +29,11 @@ $debug_options = get_option(PAC_VDM_DEBUG_OPTION, [
     
     <!-- Tab Navigation -->
     <h2 class="nav-tab-wrapper">
-        <a href="#mappings" class="nav-tab nav-tab-active" data-tab="mappings">
+        <a href="#setup" class="nav-tab nav-tab-active" data-tab="setup">
+            <span class="dashicons dashicons-admin-tools" style="font-size: 16px; line-height: 1.5;"></span>
+            <?php _e('Setup Wizard', 'pac-vehicle-data-manager'); ?>
+        </a>
+        <a href="#mappings" class="nav-tab" data-tab="mappings">
             <?php _e('Field Mappings', 'pac-vehicle-data-manager'); ?>
         </a>
         <a href="#year-expander" class="nav-tab" data-tab="year-expander">
@@ -40,8 +44,13 @@ $debug_options = get_option(PAC_VDM_DEBUG_OPTION, [
         </a>
     </h2>
     
+    <!-- Setup Tab -->
+    <div id="tab-setup" class="tab-content active">
+        <?php include PAC_VDM_PLUGIN_DIR . 'templates/admin/setup-tab.php'; ?>
+    </div>
+    
     <!-- Mappings Tab -->
-    <div id="tab-mappings" class="tab-content active">
+    <div id="tab-mappings" class="tab-content">
         <div class="tab-header">
             <div class="description">
                 <p><?php _e('Define field mappings to automatically sync data between related CCTs. When a child CCT is saved, values are pulled from its parent.', 'pac-vehicle-data-manager'); ?></p>

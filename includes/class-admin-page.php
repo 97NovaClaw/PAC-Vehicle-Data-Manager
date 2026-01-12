@@ -159,6 +159,27 @@ class PAC_VDM_Admin_Page {
         
         // Clear log
         add_action('wp_ajax_pac_vdm_clear_log', [$this, 'ajax_clear_log']);
+        
+        // Setup Wizard - CCT Mapping
+        add_action('wp_ajax_pac_vdm_save_cct_mapping', [$this, 'ajax_save_cct_mapping']);
+        
+        // Setup Wizard - Create CCT
+        add_action('wp_ajax_pac_vdm_create_cct', [$this, 'ajax_create_cct']);
+        
+        // Setup Wizard - Add missing fields to CCT
+        add_action('wp_ajax_pac_vdm_add_missing_fields', [$this, 'ajax_add_missing_fields']);
+        
+        // Setup Wizard - Create relation
+        add_action('wp_ajax_pac_vdm_create_relation', [$this, 'ajax_create_relation']);
+        
+        // Setup Wizard - Create all missing relations
+        add_action('wp_ajax_pac_vdm_create_all_relations', [$this, 'ajax_create_all_relations']);
+        
+        // Setup Wizard - Auto-create all field mappings
+        add_action('wp_ajax_pac_vdm_auto_create_mappings', [$this, 'ajax_auto_create_mappings']);
+        
+        // Get setup status
+        add_action('wp_ajax_pac_vdm_get_setup_status', [$this, 'ajax_get_setup_status']);
     }
     
     /**
@@ -439,6 +460,312 @@ class PAC_VDM_Admin_Page {
         } else {
             wp_send_json_error(['message' => __('Failed to clear log.', 'pac-vehicle-data-manager')]);
         }
+    }
+    
+    /**
+     * AJAX: Save CCT role mapping
+     */
+    public function ajax_save_cct_mapping() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        $ccts = isset($_POST['ccts']) ? $_POST['ccts'] : [];
+        
+        // Check if any roles are set to create new
+        $created_ccts = [];
+        
+        foreach ($ccts as $role => $slug) {
+            if ($slug === '__create_new__') {
+                // Create the CCT
+                $result = $cct_builder->create_cct($role);
+                
+                if (is_wp_error($result)) {
+                    wp_send_json_error([
+                        'message' => sprintf(
+                            __('Failed to create CCT for %s: %s', 'pac-vehicle-data-manager'),
+                            $role,
+                            $result->get_error_message()
+                        ),
+                    ]);
+                    return;
+                }
+                
+                // Get the role definition to get the default slug
+                $roles = $cct_builder->get_cct_roles();
+                $ccts[$role] = $roles[$role]['slug'];
+                $created_ccts[] = $roles[$role]['name'];
+            }
+        }
+        
+        // Save the mapping
+        $setup = $cct_builder->get_setup();
+        $setup['ccts'] = array_merge($setup['ccts'] ?? [], $ccts);
+        
+        if ($cct_builder->save_setup($setup)) {
+            pac_vdm_debug_log('CCT mapping saved', $setup);
+            
+            $message = __('CCT mapping saved successfully!', 'pac-vehicle-data-manager');
+            
+            if (!empty($created_ccts)) {
+                $message .= ' ' . sprintf(
+                    __('Created CCTs: %s', 'pac-vehicle-data-manager'),
+                    implode(', ', $created_ccts)
+                );
+            }
+            
+            wp_send_json_success([
+                'message' => $message,
+                'mapping_status' => $cct_builder->get_mapping_status(),
+                'relations_status' => $cct_builder->get_relations_status(),
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to save CCT mapping.', 'pac-vehicle-data-manager')]);
+        }
+    }
+    
+    /**
+     * AJAX: Create CCT for a role
+     */
+    public function ajax_create_cct() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $role = isset($_POST['role']) ? sanitize_key($_POST['role']) : '';
+        $custom_slug = isset($_POST['custom_slug']) ? sanitize_title($_POST['custom_slug']) : '';
+        $custom_name = isset($_POST['custom_name']) ? sanitize_text_field($_POST['custom_name']) : '';
+        
+        if (empty($role)) {
+            wp_send_json_error(['message' => __('Role is required.', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        $result = $cct_builder->create_cct($role, $custom_slug, $custom_name);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(['message' => $result->get_error_message()]);
+            return;
+        }
+        
+        $roles = $cct_builder->get_cct_roles();
+        $slug = !empty($custom_slug) ? $custom_slug : $roles[$role]['slug'];
+        
+        // Update setup mapping
+        $setup = $cct_builder->get_setup();
+        $setup['ccts'][$role] = $slug;
+        $cct_builder->save_setup($setup);
+        
+        pac_vdm_debug_log('CCT created via wizard', ['role' => $role, 'cct_id' => $result]);
+        
+        wp_send_json_success([
+            'message' => __('CCT created successfully!', 'pac-vehicle-data-manager'),
+            'cct_id' => $result,
+            'slug' => $slug,
+            'mapping_status' => $cct_builder->get_mapping_status(),
+            'relations_status' => $cct_builder->get_relations_status(),
+        ]);
+    }
+    
+    /**
+     * AJAX: Add missing fields to CCT
+     */
+    public function ajax_add_missing_fields() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $role = isset($_POST['role']) ? sanitize_key($_POST['role']) : '';
+        $slug = isset($_POST['slug']) ? sanitize_text_field($_POST['slug']) : '';
+        
+        if (empty($role) || empty($slug)) {
+            wp_send_json_error(['message' => __('Role and slug are required.', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        $roles = $cct_builder->get_cct_roles();
+        
+        if (!isset($roles[$role])) {
+            wp_send_json_error(['message' => __('Invalid role.', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $result = $cct_builder->add_missing_fields_to_cct($slug, $roles[$role]['fields']);
+        
+        if ($result) {
+            pac_vdm_debug_log('Added missing fields to CCT', ['role' => $role, 'slug' => $slug]);
+            
+            wp_send_json_success([
+                'message' => __('Missing fields added successfully!', 'pac-vehicle-data-manager'),
+                'mapping_status' => $cct_builder->get_mapping_status(),
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to add missing fields.', 'pac-vehicle-data-manager')]);
+        }
+    }
+    
+    /**
+     * AJAX: Create single relation
+     */
+    public function ajax_create_relation() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $parent_slug = isset($_POST['parent_slug']) ? sanitize_text_field($_POST['parent_slug']) : '';
+        $child_slug = isset($_POST['child_slug']) ? sanitize_text_field($_POST['child_slug']) : '';
+        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
+        
+        if (empty($parent_slug) || empty($child_slug) || empty($name)) {
+            wp_send_json_error(['message' => __('Parent, child, and name are required.', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        $result = $cct_builder->create_relation($parent_slug, $child_slug, $name);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(['message' => $result->get_error_message()]);
+            return;
+        }
+        
+        pac_vdm_debug_log('Relation created via wizard', [
+            'relation_id' => $result,
+            'parent' => $parent_slug,
+            'child' => $child_slug,
+        ]);
+        
+        wp_send_json_success([
+            'message' => __('Relation created successfully!', 'pac-vehicle-data-manager'),
+            'relation_id' => $result,
+            'relations_status' => $cct_builder->get_relations_status(),
+        ]);
+    }
+    
+    /**
+     * AJAX: Create all missing relations
+     */
+    public function ajax_create_all_relations() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        $relations_status = $cct_builder->get_relations_status();
+        $relations_defs = $cct_builder->get_relation_definitions();
+        
+        $created = 0;
+        $errors = [];
+        
+        foreach ($relations_status as $key => $status) {
+            if ($status['is_ready'] && !$status['is_complete']) {
+                $result = $cct_builder->create_relation(
+                    $status['parent_slug'],
+                    $status['child_slug'],
+                    $status['name']
+                );
+                
+                if (is_wp_error($result)) {
+                    $errors[] = $status['name'] . ': ' . $result->get_error_message();
+                } else {
+                    $created++;
+                }
+            }
+        }
+        
+        if ($created > 0 || empty($errors)) {
+            $message = sprintf(
+                _n('%d relation created.', '%d relations created.', $created, 'pac-vehicle-data-manager'),
+                $created
+            );
+            
+            if (!empty($errors)) {
+                $message .= ' ' . __('Errors:', 'pac-vehicle-data-manager') . ' ' . implode('; ', $errors);
+            }
+            
+            pac_vdm_debug_log('Created all relations via wizard', ['count' => $created]);
+            
+            wp_send_json_success([
+                'message' => $message,
+                'created' => $created,
+                'relations_status' => $cct_builder->get_relations_status(),
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Failed to create relations.', 'pac-vehicle-data-manager') . ' ' . implode('; ', $errors),
+            ]);
+        }
+    }
+    
+    /**
+     * AJAX: Auto-create all field mappings
+     */
+    public function ajax_auto_create_mappings() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        $created_mappings = $cct_builder->auto_create_field_mappings();
+        
+        $count = count($created_mappings);
+        
+        if ($count > 0) {
+            wp_send_json_success([
+                'message' => sprintf(
+                    _n('%d field mapping created.', '%d field mappings created.', $count, 'pac-vehicle-data-manager'),
+                    $count
+                ),
+                'mappings' => $this->config_manager->get_mappings(),
+                'year_expander' => $this->config_manager->get_year_expander_config(),
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('No mappings to create. Ensure relations are set up first.', 'pac-vehicle-data-manager'),
+            ]);
+        }
+    }
+    
+    /**
+     * AJAX: Get current setup status
+     */
+    public function ajax_get_setup_status() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_builder = new PAC_VDM_CCT_Builder();
+        
+        wp_send_json_success([
+            'mapping_status' => $cct_builder->get_mapping_status(),
+            'relations_status' => $cct_builder->get_relations_status(),
+            'cct_roles' => $cct_builder->get_cct_roles(),
+            'relation_definitions' => $cct_builder->get_relation_definitions(),
+        ]);
     }
 }
 

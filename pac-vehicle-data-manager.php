@@ -188,6 +188,7 @@ function pac_vdm_init() {
         // Load core classes
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-discovery.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-config-manager.php';
+        require_once PAC_VDM_PLUGIN_DIR . 'includes/class-cct-builder.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-year-expander.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-data-flattener.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-field-locker.php';

@@ -38,6 +38,13 @@
             // Tab switching
             $('.pac-vdm-settings .nav-tab').on('click', this.handleTabClick.bind(this));
             
+            // Setup Wizard
+            $('#save-cct-mapping-btn').on('click', this.saveCctMapping.bind(this));
+            $(document).on('click', '.add-missing-fields-btn', this.addMissingFields.bind(this));
+            $(document).on('click', '.create-relation-btn', this.createRelation.bind(this));
+            $('#create-all-relations-btn').on('click', this.createAllRelations.bind(this));
+            $('#auto-create-mappings-btn').on('click', this.autoCreateMappings.bind(this));
+            
             // Mappings
             $('#add-mapping-btn').on('click', this.addMappingRow.bind(this));
             $('#save-mappings-btn').on('click', this.saveMappings.bind(this));
@@ -623,6 +630,226 @@
                     $spinner.removeClass('is-active');
                     
                     setTimeout(() => $message.fadeOut(), 3000);
+                }
+            });
+        },
+        
+        /**
+         * Save CCT role mapping
+         */
+        saveCctMapping: function(e) {
+            e.preventDefault();
+            
+            const $btn = $('#save-cct-mapping-btn');
+            const $spinner = $('#cct-mapping-spinner');
+            const $message = $('#cct-mapping-message');
+            
+            $btn.prop('disabled', true);
+            $spinner.addClass('is-active');
+            $message.text('').removeClass('success error');
+            
+            // Collect CCT mapping data
+            const ccts = {};
+            $('.cct-role-select').each(function() {
+                const role = $(this).data('role');
+                const slug = $(this).val();
+                if (slug) {
+                    ccts[role] = slug;
+                }
+            });
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_save_cct_mapping',
+                    nonce: this.config.nonce,
+                    ccts: ccts
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                        // Reload the page to refresh status
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        $message.text(response.data.message || 'Error saving mapping').addClass('error');
+                    }
+                },
+                error: () => {
+                    $message.text('Error saving mapping').addClass('error');
+                },
+                complete: () => {
+                    $btn.prop('disabled', false);
+                    $spinner.removeClass('is-active');
+                }
+            });
+        },
+        
+        /**
+         * Add missing fields to a CCT
+         */
+        addMissingFields: function(e) {
+            e.preventDefault();
+            
+            const $btn = $(e.currentTarget);
+            const role = $btn.data('role');
+            const slug = $btn.data('slug');
+            
+            $btn.prop('disabled', true);
+            $btn.find('.dashicons').removeClass('dashicons-plus').addClass('dashicons-update spin');
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_add_missing_fields',
+                    nonce: this.config.nonce,
+                    role: role,
+                    slug: slug
+                },
+                success: (response) => {
+                    if (response.success) {
+                        // Reload to show updated status
+                        window.location.reload();
+                    } else {
+                        alert(response.data.message || 'Error adding fields');
+                        $btn.prop('disabled', false);
+                        $btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-plus');
+                    }
+                },
+                error: () => {
+                    alert('Error adding fields');
+                    $btn.prop('disabled', false);
+                    $btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-plus');
+                }
+            });
+        },
+        
+        /**
+         * Create a single relation
+         */
+        createRelation: function(e) {
+            e.preventDefault();
+            
+            const $btn = $(e.currentTarget);
+            const parent = $btn.data('parent');
+            const child = $btn.data('child');
+            const name = $btn.data('name');
+            
+            $btn.prop('disabled', true);
+            $btn.find('.dashicons').removeClass('dashicons-admin-links').addClass('dashicons-update spin');
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_create_relation',
+                    nonce: this.config.nonce,
+                    parent_slug: parent,
+                    child_slug: child,
+                    name: name
+                },
+                success: (response) => {
+                    if (response.success) {
+                        // Reload to show updated status
+                        window.location.reload();
+                    } else {
+                        alert(response.data.message || 'Error creating relation');
+                        $btn.prop('disabled', false);
+                        $btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-admin-links');
+                    }
+                },
+                error: () => {
+                    alert('Error creating relation');
+                    $btn.prop('disabled', false);
+                    $btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-admin-links');
+                }
+            });
+        },
+        
+        /**
+         * Create all missing relations
+         */
+        createAllRelations: function(e) {
+            e.preventDefault();
+            
+            const $btn = $('#create-all-relations-btn');
+            const $spinner = $('#relations-spinner');
+            const $message = $('#relations-message');
+            
+            $btn.prop('disabled', true);
+            $spinner.addClass('is-active');
+            $message.text('').removeClass('success error');
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_create_all_relations',
+                    nonce: this.config.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                        // Reload to show updated status
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        $message.text(response.data.message || 'Error creating relations').addClass('error');
+                    }
+                },
+                error: () => {
+                    $message.text('Error creating relations').addClass('error');
+                },
+                complete: () => {
+                    $btn.prop('disabled', false);
+                    $spinner.removeClass('is-active');
+                }
+            });
+        },
+        
+        /**
+         * Auto-create all field mappings
+         */
+        autoCreateMappings: function(e) {
+            e.preventDefault();
+            
+            const $btn = $('#auto-create-mappings-btn');
+            const $spinner = $('#auto-mappings-spinner');
+            const $message = $('#auto-mappings-message');
+            
+            $btn.prop('disabled', true);
+            $spinner.addClass('is-active');
+            $message.text('').removeClass('success error');
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_auto_create_mappings',
+                    nonce: this.config.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                        // Update local mappings config
+                        if (response.data.mappings) {
+                            this.config.mappings = response.data.mappings;
+                        }
+                        if (response.data.year_expander) {
+                            this.config.year_expander = response.data.year_expander;
+                        }
+                        // Notify user
+                        $message.append(' <a href="#mappings" class="button button-small">View Mappings</a>');
+                    } else {
+                        $message.text(response.data.message || 'Error creating mappings').addClass('error');
+                    }
+                },
+                error: () => {
+                    $message.text('Error creating mappings').addClass('error');
+                },
+                complete: () => {
+                    $btn.prop('disabled', false);
+                    $spinner.removeClass('is-active');
                 }
             });
         },
