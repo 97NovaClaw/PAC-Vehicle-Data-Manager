@@ -27,7 +27,14 @@ $available_ccts = $discovery->get_all_ccts();
 </div>
 
 <h3><?php _e('Step 1: CCT Role Mapping', 'pac-vehicle-data-manager'); ?></h3>
-<p class="description"><?php _e('Assign which CCT plays each role in your vehicle data hierarchy. You can select an existing CCT or create a new one.', 'pac-vehicle-data-manager'); ?></p>
+<div class="notice notice-info inline" style="margin: 15px 0;">
+    <p>
+        <strong><?php _e('How this works:', 'pac-vehicle-data-manager'); ?></strong><br>
+        <?php _e('1. Map each CCT to its role (Makes, Models, Vehicle Configs, Service Guides)', 'pac-vehicle-data-manager'); ?><br>
+        <?php _e('2. Click "Edit CCT" to open JetEngine and add the required fields shown below', 'pac-vehicle-data-manager'); ?><br>
+        <?php _e('3. Once all fields exist (green checkmarks), proceed to create relations', 'pac-vehicle-data-manager'); ?>
+    </p>
+</div>
 
 <table class="wp-list-table widefat fixed striped" id="cct-mapping-table">
     <thead>
@@ -71,17 +78,35 @@ $available_ccts = $discovery->get_all_ccts();
                 <td class="fields-status">
                     <?php if ($status['cct_exists'] && !empty($status['fields'])): ?>
                         <div class="field-badges">
-                            <?php foreach ($status['fields'] as $field_name => $field_status): ?>
-                                <?php
+                            <?php 
+                            $required_count = 0;
+                            $existing_count = 0;
+                            foreach ($status['fields'] as $field_name => $field_status): 
+                                if ($field_status['required']) $required_count++;
+                                if ($field_status['exists']) $existing_count++;
+                                
                                 $badge_class = $field_status['exists'] ? 'field-exists' : 'field-missing';
                                 $icon = $field_status['exists'] ? 'yes' : 'no';
+                                $required_marker = $field_status['required'] ? ' *' : '';
+                                $tooltip = $field_status['title'];
+                                if ($field_status['required']) {
+                                    $tooltip .= ' (REQUIRED)';
+                                }
                                 ?>
-                                <span class="field-badge <?php echo $badge_class; ?>" title="<?php echo esc_attr($field_status['title']); ?>">
+                                <span class="field-badge <?php echo $badge_class; ?>" 
+                                      title="<?php echo esc_attr($tooltip); ?>">
                                     <span class="dashicons dashicons-<?php echo $icon; ?>"></span>
-                                    <?php echo esc_html($field_name); ?>
+                                    <?php echo esc_html($field_name . $required_marker); ?>
                                 </span>
                             <?php endforeach; ?>
                         </div>
+                        <small class="field-count" style="display: block; margin-top: 5px; color: #646970;">
+                            <?php printf(
+                                __('%d of %d required fields exist', 'pac-vehicle-data-manager'),
+                                $existing_count,
+                                $required_count
+                            ); ?>
+                        </small>
                     <?php elseif (!$status['cct_exists'] && !empty($status['mapped_slug'])): ?>
                         <span class="status-error">
                             <span class="dashicons dashicons-warning"></span>
@@ -93,17 +118,24 @@ $available_ccts = $discovery->get_all_ccts();
                 </td>
                 <td class="actions-cell">
                     <?php if ($status['cct_exists'] && !$status['is_complete']): ?>
-                        <button type="button" class="button button-small add-missing-fields-btn" 
-                                data-role="<?php echo esc_attr($role_key); ?>"
-                                data-slug="<?php echo esc_attr($status['mapped_slug']); ?>">
-                            <span class="dashicons dashicons-plus"></span>
-                            <?php _e('Add Missing', 'pac-vehicle-data-manager'); ?>
-                        </button>
+                        <a href="<?php echo admin_url('admin.php?page=jet-engine-cpt&cct_id=' . $status['mapped_slug']); ?>" 
+                           class="button button-small" 
+                           target="_blank">
+                            <span class="dashicons dashicons-admin-generic"></span>
+                            <?php _e('Add in JetEngine', 'pac-vehicle-data-manager'); ?>
+                        </a>
                     <?php elseif ($status['is_complete']): ?>
                         <span class="status-complete">
                             <span class="dashicons dashicons-yes"></span>
-                            <?php _e('Ready', 'pac-vehicle-data-manager'); ?>
+                            <?php _e('Complete', 'pac-vehicle-data-manager'); ?>
                         </span>
+                    <?php elseif ($status['cct_exists']): ?>
+                        <a href="<?php echo admin_url('admin.php?page=jet-engine-cpt&cct_id=' . $status['mapped_slug']); ?>" 
+                           class="button button-small" 
+                           target="_blank">
+                            <span class="dashicons dashicons-admin-generic"></span>
+                            <?php _e('Edit CCT', 'pac-vehicle-data-manager'); ?>
+                        </a>
                     <?php endif; ?>
                 </td>
             </tr>

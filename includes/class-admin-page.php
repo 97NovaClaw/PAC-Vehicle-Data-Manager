@@ -166,9 +166,6 @@ class PAC_VDM_Admin_Page {
         // Setup Wizard - Create CCT
         add_action('wp_ajax_pac_vdm_create_cct', [$this, 'ajax_create_cct']);
         
-        // Setup Wizard - Add missing fields to CCT
-        add_action('wp_ajax_pac_vdm_add_missing_fields', [$this, 'ajax_add_missing_fields']);
-        
         // Setup Wizard - Create relation
         add_action('wp_ajax_pac_vdm_create_relation', [$this, 'ajax_create_relation']);
         
@@ -573,84 +570,6 @@ class PAC_VDM_Admin_Page {
             'mapping_status' => $cct_builder->get_mapping_status(),
             'relations_status' => $cct_builder->get_relations_status(),
         ]);
-    }
-    
-    /**
-     * AJAX: Add missing fields to CCT
-     * 
-     * FIXED: Added detailed error logging for debugging
-     */
-    public function ajax_add_missing_fields() {
-        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
-            return;
-        }
-        
-        $role = isset($_POST['role']) ? sanitize_key($_POST['role']) : '';
-        $slug = isset($_POST['slug']) ? sanitize_text_field($_POST['slug']) : '';
-        
-        if (empty($role) || empty($slug)) {
-            wp_send_json_error(['message' => __('Role and slug are required.', 'pac-vehicle-data-manager')]);
-            return;
-        }
-        
-        pac_vdm_debug_log('AJAX: Add missing fields request', [
-            'role' => $role,
-            'slug' => $slug
-        ], 'critical');
-        
-        $cct_builder = new PAC_VDM_CCT_Builder();
-        $roles = $cct_builder->get_cct_roles();
-        
-        if (!isset($roles[$role])) {
-            pac_vdm_debug_log('Invalid role specified', ['role' => $role], 'error');
-            wp_send_json_error(['message' => __('Invalid role.', 'pac-vehicle-data-manager')]);
-            return;
-        }
-        
-        try {
-            $result = $cct_builder->add_missing_fields_to_cct($slug, $roles[$role]['fields']);
-            
-            pac_vdm_debug_log('add_missing_fields_to_cct returned', ['result' => $result]);
-            
-            if ($result) {
-                pac_vdm_debug_log('Preparing success response...', null, 'critical');
-                
-                // Get mapping status - wrapped separately in case it fails
-                $mapping_status = [];
-                try {
-                    $mapping_status = $cct_builder->get_mapping_status();
-                    pac_vdm_debug_log('Got mapping status successfully');
-                } catch (\Exception $e) {
-                    pac_vdm_debug_log('get_mapping_status failed', ['error' => $e->getMessage()], 'warning');
-                }
-                
-                pac_vdm_debug_log('Sending success response', null, 'critical');
-                
-                wp_send_json_success([
-                    'message' => __('Missing fields added successfully!', 'pac-vehicle-data-manager'),
-                    'mapping_status' => $mapping_status,
-                ]);
-            } else {
-                pac_vdm_debug_log('add_missing_fields_to_cct returned false', null, 'error');
-                
-                wp_send_json_error([
-                    'message' => __('Failed to add missing fields. Check debug log for details.', 'pac-vehicle-data-manager')
-                ]);
-            }
-        } catch (\Throwable $e) {
-            pac_vdm_debug_log('Exception in ajax_add_missing_fields', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 'error');
-            
-            wp_send_json_error([
-                'message' => sprintf(__('Error: %s', 'pac-vehicle-data-manager'), $e->getMessage())
-            ]);
-        }
     }
     
     /**

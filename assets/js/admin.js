@@ -47,7 +47,6 @@
             
             // Setup Wizard - DELEGATED event handlers (content may not be in DOM yet)
             $(document).on('click', '#save-cct-mapping-btn', this.saveCctMapping.bind(this));
-            $(document).on('click', '.add-missing-fields-btn', this.addMissingFields.bind(this));
             $(document).on('click', '.create-relation-btn', this.createRelation.bind(this));
             $(document).on('click', '#create-all-relations-btn', this.createAllRelations.bind(this));
             $(document).on('click', '#auto-create-mappings-btn', this.autoCreateMappings.bind(this));
@@ -690,48 +689,6 @@
                 complete: () => {
                     $btn.prop('disabled', false);
                     $spinner.removeClass('is-active');
-                }
-            });
-        },
-        
-        /**
-         * Add missing fields to a CCT
-         */
-        addMissingFields: function(e) {
-            e.preventDefault();
-            
-            console.log('[PAC VDM Admin] Add missing fields clicked');
-            
-            const $btn = $(e.currentTarget);
-            const role = $btn.data('role');
-            const slug = $btn.data('slug');
-            
-            $btn.prop('disabled', true);
-            $btn.find('.dashicons').removeClass('dashicons-plus').addClass('dashicons-update spin');
-            
-            $.ajax({
-                url: this.config.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'pac_vdm_add_missing_fields',
-                    nonce: this.config.nonce,
-                    role: role,
-                    slug: slug
-                },
-                success: (response) => {
-                    if (response.success) {
-                        // Reload to show updated status
-                        window.location.reload();
-                    } else {
-                        alert(response.data.message || 'Error adding fields');
-                        $btn.prop('disabled', false);
-                        $btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-plus');
-                    }
-                },
-                error: () => {
-                    alert('Error adding fields');
-                    $btn.prop('disabled', false);
-                    $btn.find('.dashicons').removeClass('dashicons-update spin').addClass('dashicons-plus');
                 }
             });
         },
