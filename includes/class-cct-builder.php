@@ -425,8 +425,17 @@ class PAC_VDM_CCT_Builder {
             'total_fields' => count($all_fields)
         ], 'critical');
         
-        // Clear cache
-        $module->manager->flush_cache();
+        // Clear cache - wrapped in try-catch because it might fail
+        try {
+            $module->manager->flush_cache();
+            pac_vdm_debug_log("Cache flushed successfully");
+        } catch (\Exception $e) {
+            pac_vdm_debug_log("Cache flush failed (non-fatal)", [
+                'error' => $e->getMessage()
+            ], 'warning');
+        }
+        
+        pac_vdm_debug_log("Returning true from add_missing_fields_to_cct");
         
         return true;
     }
