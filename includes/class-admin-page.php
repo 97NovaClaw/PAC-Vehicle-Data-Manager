@@ -577,6 +577,8 @@ class PAC_VDM_Admin_Page {
     
     /**
      * AJAX: Add missing fields to CCT
+     * 
+     * FIXED: Added detailed error logging for debugging
      */
     public function ajax_add_missing_fields() {
         check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
@@ -594,10 +596,16 @@ class PAC_VDM_Admin_Page {
             return;
         }
         
+        pac_vdm_debug_log('AJAX: Add missing fields request', [
+            'role' => $role,
+            'slug' => $slug
+        ], 'critical');
+        
         $cct_builder = new PAC_VDM_CCT_Builder();
         $roles = $cct_builder->get_cct_roles();
         
         if (!isset($roles[$role])) {
+            pac_vdm_debug_log('Invalid role specified', ['role' => $role], 'error');
             wp_send_json_error(['message' => __('Invalid role.', 'pac-vehicle-data-manager')]);
             return;
         }
@@ -605,14 +613,24 @@ class PAC_VDM_Admin_Page {
         $result = $cct_builder->add_missing_fields_to_cct($slug, $roles[$role]['fields']);
         
         if ($result) {
-            pac_vdm_debug_log('Added missing fields to CCT', ['role' => $role, 'slug' => $slug]);
+            pac_vdm_debug_log('Successfully added missing fields via AJAX', [
+                'role' => $role,
+                'slug' => $slug
+            ], 'critical');
             
             wp_send_json_success([
                 'message' => __('Missing fields added successfully!', 'pac-vehicle-data-manager'),
                 'mapping_status' => $cct_builder->get_mapping_status(),
             ]);
         } else {
-            wp_send_json_error(['message' => __('Failed to add missing fields.', 'pac-vehicle-data-manager')]);
+            pac_vdm_debug_log('Failed to add missing fields via AJAX', [
+                'role' => $role,
+                'slug' => $slug
+            ], 'error');
+            
+            wp_send_json_error([
+                'message' => __('Failed to add missing fields. Check debug log for details.', 'pac-vehicle-data-manager')
+            ]);
         }
     }
     

@@ -309,12 +309,15 @@ class PAC_VDM_CCT_Builder {
     /**
      * Add missing fields to an existing CCT
      *
+     * FIXED: Added comprehensive error logging and validation
+     *
      * @param string $cct_slug CCT slug
      * @param array  $required_fields Fields that should exist
      * @return bool Success
      */
     public function add_missing_fields_to_cct($cct_slug, $required_fields) {
         if (!class_exists('\\Jet_Engine\\Modules\\Custom_Content_Types\\Module')) {
+            pac_vdm_debug_log("JetEngine CCT module not found", null, 'error');
             return false;
         }
         
@@ -322,12 +325,24 @@ class PAC_VDM_CCT_Builder {
         $content_type = $module->manager->get_content_types($cct_slug);
         
         if (!$content_type) {
+            pac_vdm_debug_log("CCT not found: {$cct_slug}", null, 'error');
             return false;
         }
+        
+        pac_vdm_debug_log("Found CCT object", [
+            'slug' => $cct_slug,
+            'type_id' => $content_type->type_id ?? 'N/A',
+            'class' => get_class($content_type)
+        ]);
         
         // Get existing fields
         $existing_fields = $content_type->get_arg('fields') ?: [];
         $existing_field_names = array_column($existing_fields, 'name');
+        
+        pac_vdm_debug_log("Existing fields in CCT", [
+            'count' => count($existing_fields),
+            'field_names' => $existing_field_names
+        ]);
         
         $fields_to_add = [];
         
@@ -342,25 +357,67 @@ class PAC_VDM_CCT_Builder {
             return true;
         }
         
-        pac_vdm_debug_log("Adding missing fields to CCT: {$cct_slug}", $fields_to_add);
+        pac_vdm_debug_log("Fields to add to CCT: {$cct_slug}", [
+            'count' => count($fields_to_add),
+            'fields' => $fields_to_add
+        ]);
         
         // Build new fields array
         $new_fields = $this->build_fields_array($fields_to_add);
         $all_fields = array_merge($existing_fields, $new_fields);
         
+        pac_vdm_debug_log("Built JetEngine fields array", [
+            'original_count' => count($existing_fields),
+            'new_count' => count($new_fields),
+            'total_count' => count($all_fields)
+        ]);
+        
         // Get the CCT data
         $data_store = $module->manager->data;
-        $cct_data = $data_store->get_item_for_edit($content_type->type_id);
         
-        if (!$cct_data) {
+        if (!$data_store) {
+            pac_vdm_debug_log("Data store not accessible", null, 'error');
             return false;
         }
+        
+        // CRITICAL FIX: get_item_for_edit requires the database ID, not type_id
+        // We need to get the proper item ID from the data store
+        $cct_data = $data_store->get_item_for_edit($content_type->_ID);
+        
+        if (!$cct_data) {
+            pac_vdm_debug_log("Failed to get CCT data for editing", [
+                'type_id' => $content_type->type_id ?? 'N/A',
+                '_ID' => $content_type->_ID ?? 'N/A',
+                'available_properties' => array_keys(get_object_vars($content_type))
+            ], 'error');
+            return false;
+        }
+        
+        pac_vdm_debug_log("Retrieved CCT data for editing", [
+            'has_args' => isset($cct_data['args']),
+            'has_fields' => isset($cct_data['args']['fields']),
+            'keys' => array_keys($cct_data)
+        ]);
         
         // Update fields
         $cct_data['args']['fields'] = $all_fields;
         
         // Save updated CCT
-        $data_store->update_item_in_db($cct_data);
+        $update_result = $data_store->update_item_in_db($cct_data);
+        
+        if (!$update_result) {
+            pac_vdm_debug_log("Failed to update CCT in database", [
+                'cct_slug' => $cct_slug,
+                'cct_data_keys' => array_keys($cct_data)
+            ], 'error');
+            return false;
+        }
+        
+        pac_vdm_debug_log("Successfully updated CCT fields", [
+            'cct_slug' => $cct_slug,
+            'fields_added' => count($new_fields),
+            'total_fields' => count($all_fields)
+        ], 'critical');
         
         // Clear cache
         $module->manager->flush_cache();
