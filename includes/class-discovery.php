@@ -168,6 +168,8 @@ class PAC_VDM_Discovery {
     /**
      * Get all JetEngine relations
      *
+     * FIXED: Don't spam errors during initialization
+     *
      * @return array Array of relation objects
      */
     public function get_all_relations() {
@@ -177,7 +179,12 @@ class PAC_VDM_Discovery {
         }
         
         if (!function_exists('jet_engine') || !jet_engine()->relations) {
-            pac_vdm_log_error('JetEngine Relations not available');
+            // Only log this once per request to avoid spam
+            static $logged = false;
+            if (!$logged) {
+                pac_vdm_debug_log('JetEngine Relations not yet loaded (normal during init)');
+                $logged = true;
+            }
             return [];
         }
         
