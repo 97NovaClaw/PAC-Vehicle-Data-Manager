@@ -1,0 +1,95 @@
+/**
+ * Field Locker Styles
+ *
+ * Styles for locked and hidden fields in JetEngine CCT edit screens
+ *
+ * @package PAC_Vehicle_Data_Manager
+ */
+
+/* Locked Field Styling */
+.pac-vdm-locked {
+    background-color: #f6f7f7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+    border-color: #dcdcde !important;
+}
+
+.pac-vdm-locked:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Locked Component Wrapper */
+.pac-vdm-locked-wrapper {
+    position: relative;
+    opacity: 0.85;
+}
+
+.pac-vdm-locked-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Locked Badge */
+.pac-vdm-locked-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: #f0f6fc;
+    border: 1px solid #0073aa;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #0073aa;
+    white-space: nowrap;
+}
+
+.pac-vdm-locked-badge .dashicons {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+}
+
+/* Hidden Field Styling */
+.pac-vdm-hidden-field {
+    display: none !important;
+}
+
+/* Prevent interaction with locked fields */
+.pac-vdm-locked-wrapper input,
+.pac-vdm-locked-wrapper select,
+.pac-vdm-locked-wrapper textarea {
+    pointer-events: none !important;
+}
+
+/* CX-VUI (JetEngine UI Library) specific styles */
+.cx-vui-component.pac-vdm-locked-wrapper .cx-vui-component__control {
+    pointer-events: none;
+}
+
+.cx-vui-component.pac-vdm-locked-wrapper .cx-vui-input,
+.cx-vui-component.pac-vdm-locked-wrapper .cx-vui-textarea,
+.cx-vui-component.pac-vdm-locked-wrapper .cx-vui-select {
+    background-color: #f6f7f7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+}
+
+/* Ensure hidden fields are actually hidden */
+tr.pac-vdm-hidden-field,
+.cx-vui-component.pac-vdm-hidden-field {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+

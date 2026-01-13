@@ -125,10 +125,21 @@ class PAC_VDM_Field_Locker {
     /**
      * Enqueue field locker script and localize data
      *
+     * FIXED: Properly enqueue CSS file instead of broken inline styles
+     *
      * @param array $readonly_fields Fields to make read-only
      * @param array $hidden_fields   Fields to hide
      */
     private function enqueue_field_locker($readonly_fields, $hidden_fields) {
+        // Enqueue CSS first
+        wp_enqueue_style(
+            'pac-vdm-field-locker',
+            PAC_VDM_PLUGIN_URL . 'assets/css/field-locker.css',
+            [],
+            PAC_VDM_VERSION
+        );
+        
+        // Enqueue JavaScript
         wp_enqueue_script(
             'pac-vdm-field-locker',
             PAC_VDM_PLUGIN_URL . 'assets/js/field-locker.js',
@@ -147,59 +158,6 @@ class PAC_VDM_Field_Locker {
                 'inherited_label' => __('Auto-synced', 'pac-vehicle-data-manager'),
             ],
         ]);
-        
-        // Add inline styles for locked fields
-        $this->add_inline_styles();
-    }
-    
-    /**
-     * Add inline CSS for locked field styling
-     */
-    private function add_inline_styles() {
-        $css = '
-            .pac-vdm-locked {
-                background: #f0f0f1 !important;
-                opacity: 0.7;
-                cursor: not-allowed;
-                pointer-events: none;
-            }
-            
-            .pac-vdm-locked-wrapper {
-                position: relative;
-            }
-            
-            .pac-vdm-locked-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 4px;
-                padding: 2px 8px;
-                background: #dcdcde;
-                border-radius: 3px;
-                font-size: 11px;
-                color: #50575e;
-                margin-left: 8px;
-                vertical-align: middle;
-            }
-            
-            .pac-vdm-locked-badge .dashicons {
-                width: 14px;
-                height: 14px;
-                font-size: 14px;
-            }
-            
-            .pac-vdm-hidden-field {
-                display: none !important;
-            }
-            
-            /* Ensure select2 and other enhanced inputs also get locked */
-            .pac-vdm-locked-wrapper .select2-container,
-            .pac-vdm-locked-wrapper .cx-vui-component__control {
-                pointer-events: none;
-                opacity: 0.7;
-            }
-        ';
-        
-        wp_add_inline_style('wp-admin', $css);
     }
     
     /**
