@@ -37,26 +37,35 @@
     z-index: 1;
 }
 
-/* Locked Badge */
+/* Locked Badge - More aggressive styling to override JetEngine */
 .pac-vdm-locked-badge {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     gap: 4px;
     margin-left: 8px;
     padding: 2px 8px;
-    background: #f0f6fc;
-    border: 1px solid #0073aa;
+    background: #f0f6fc !important;
+    border: 1px solid #0073aa !important;
     border-radius: 3px;
-    font-size: 11px;
-    font-weight: 500;
-    color: #0073aa;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: #0073aa !important;
     white-space: nowrap;
+    z-index: 999;
+    vertical-align: middle;
 }
 
 .pac-vdm-locked-badge .dashicons {
-    width: 14px;
-    height: 14px;
-    font-size: 14px;
+    width: 14px !important;
+    height: 14px !important;
+    font-size: 14px !important;
+}
+
+/* Ensure badge is visible in CX-VUI components */
+.cx-vui-component__label .pac-vdm-locked-badge,
+label .pac-vdm-locked-badge {
+    display: inline-flex !important;
+    visibility: visible !important;
 }
 
 /* Hidden Field Styling */

@@ -842,11 +842,11 @@ class PAC_VDM_CCT_Builder {
                 ['source' => 'model_name', 'dest' => 'model_name'],
             ],
             'configs_to_guides' => [
-                ['source' => 'make_name', 'dest' => 'make_name'],
-                ['source' => 'model_name', 'dest' => 'model_name'],
-                ['source' => 'generation_code', 'dest' => 'generation_code'],
-                ['source' => 'powertrain_engine', 'dest' => 'powertrain_engine'],
-                ['source' => 'year_range_list', 'dest' => 'year_range_list'],
+                ['source' => 'make_name', 'dest' => 'make_name', 'ui' => 'readonly'],
+                ['source' => 'model_name', 'dest' => 'model_name', 'ui' => 'readonly'],
+                ['source' => 'generation_code', 'dest' => 'generation_code', 'ui' => 'readonly'],
+                ['source' => 'powertrain_engine', 'dest' => 'powertrain_engine', 'ui' => 'readonly'],
+                ['source' => 'year_range_list', 'dest' => 'year_range_list', 'ui' => 'hidden'], // HIDDEN - auto-generated field
             ],
         ];
         
@@ -878,7 +878,7 @@ class PAC_VDM_CCT_Builder {
                     'source_field' => $field_rule['source'],
                     'destination_field' => $field_rule['dest'],
                     'direction' => 'both',
-                    'ui_behavior' => 'readonly',
+                    'ui_behavior' => isset($field_rule['ui']) ? $field_rule['ui'] : 'readonly', // Allow custom UI behavior
                     'enabled' => true,
                 ];
                 

@@ -208,6 +208,12 @@
         addLockedBadge: function($wrapper, fieldSlug) {
             const $label = $wrapper.find('.cx-vui-component__label, label').first();
             
+            this.log('Attempting to add badge to field: ' + fieldSlug, {
+                'wrapper_found': $wrapper.length > 0,
+                'label_found': $label.length > 0,
+                'label_html': $label.length > 0 ? $label.html() : 'N/A'
+            });
+            
             if ($label.length > 0 && !$label.find('.pac-vdm-locked-badge').length) {
                 const badge = `<span class="pac-vdm-locked-badge">
                     <span class="dashicons dashicons-lock"></span>
@@ -215,6 +221,12 @@
                 </span>`;
                 
                 $label.append(badge);
+                
+                this.log('Badge added successfully to: ' + fieldSlug);
+            } else if ($label.find('.pac-vdm-locked-badge').length) {
+                this.log('Badge already exists for: ' + fieldSlug);
+            } else {
+                this.log('Could not find label element for: ' + fieldSlug, 'WARNING');
             }
         },
         
