@@ -772,15 +772,24 @@ class PAC_VDM_CCT_Builder {
         
         foreach ($relations_status as $rel_key => $rel_status) {
             if (!$rel_status['is_complete']) {
+                pac_vdm_debug_log("Skipping relation (not complete)", ['rel_key' => $rel_key]);
                 continue;
             }
             
             if (!isset($field_sync_rules[$rel_key])) {
+                pac_vdm_debug_log("No field sync rules for relation", ['rel_key' => $rel_key]);
                 continue;
             }
             
             $child_cct = $rel_status['child_slug'];
             $relation_id = $rel_status['relation_id'];
+            
+            pac_vdm_debug_log("Creating mappings for relation", [
+                'rel_key' => $rel_key,
+                'relation_id' => $relation_id,
+                'child_cct' => $child_cct,
+                'field_count' => count($field_sync_rules[$rel_key])
+            ], 'critical');
             
             foreach ($field_sync_rules[$rel_key] as $field_rule) {
                 $mapping_data = [
@@ -793,10 +802,15 @@ class PAC_VDM_CCT_Builder {
                     'enabled' => true,
                 ];
                 
+                pac_vdm_debug_log("Attempting to save mapping", $mapping_data);
+                
                 $mapping_id = $config_manager->save_mapping($mapping_data);
                 
                 if ($mapping_id) {
                     $created_mappings[] = $mapping_data;
+                    pac_vdm_debug_log("Mapping saved successfully", ['mapping_id' => $mapping_id]);
+                } else {
+                    pac_vdm_debug_log("Failed to save mapping", $mapping_data, 'warning');
                 }
             }
         }
