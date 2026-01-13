@@ -148,6 +148,10 @@ $available_ccts = $discovery->get_all_ccts();
         <span class="dashicons dashicons-saved"></span>
         <?php _e('Save CCT Mapping', 'pac-vehicle-data-manager'); ?>
     </button>
+    <button type="button" id="refresh-field-status-btn" class="button button-secondary">
+        <span class="dashicons dashicons-update"></span>
+        <?php _e('Refresh Field Status', 'pac-vehicle-data-manager'); ?>
+    </button>
     <span class="spinner" id="cct-mapping-spinner" style="float: none; margin-left: 10px;"></span>
     <span id="cct-mapping-message" style="margin-left: 10px;"></span>
 </div>

@@ -47,6 +47,7 @@
             
             // Setup Wizard - DELEGATED event handlers (content may not be in DOM yet)
             $(document).on('click', '#save-cct-mapping-btn', this.saveCctMapping.bind(this));
+            $(document).on('click', '#refresh-field-status-btn', this.refreshFieldStatus.bind(this));
             $(document).on('click', '.create-relation-btn', this.createRelation.bind(this));
             $(document).on('click', '#create-all-relations-btn', this.createAllRelations.bind(this));
             $(document).on('click', '#auto-create-mappings-btn', this.autoCreateMappings.bind(this));
@@ -689,6 +690,52 @@
                 complete: () => {
                     $btn.prop('disabled', false);
                     $spinner.removeClass('is-active');
+                }
+            });
+        },
+        
+        /**
+         * Refresh field status (AJAX reload of status table)
+         */
+        refreshFieldStatus: function(e) {
+            e.preventDefault();
+            
+            console.log('[PAC VDM Admin] Refresh field status clicked');
+            
+            const $btn = $('#refresh-field-status-btn');
+            const $spinner = $('#cct-mapping-spinner');
+            const $message = $('#cct-mapping-message');
+            
+            $btn.prop('disabled', true);
+            $btn.find('.dashicons').addClass('spin');
+            $spinner.addClass('is-active');
+            $message.text('Refreshing...').removeClass('success error');
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_get_setup_status',
+                    nonce: this.config.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $message.text('Status refreshed!').addClass('success');
+                        // Reload the page to show updated status
+                        setTimeout(() => window.location.reload(), 800);
+                    } else {
+                        $message.text('Error refreshing status').addClass('error');
+                    }
+                },
+                error: () => {
+                    $message.text('Error refreshing status').addClass('error');
+                },
+                complete: () => {
+                    $btn.prop('disabled', false);
+                    $btn.find('.dashicons').removeClass('spin');
+                    $spinner.removeClass('is-active');
+                    
+                    setTimeout(() => $message.fadeOut(), 3000);
                 }
             });
         },

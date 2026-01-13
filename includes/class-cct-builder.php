@@ -606,9 +606,14 @@ class PAC_VDM_CCT_Builder {
                     $cct_exists = !empty($cct);
                     
                     if ($cct_exists) {
-                        // Check for required fields
-                        $existing_fields = $cct->get_arg('fields') ?: [];
-                        $existing_names = array_column($existing_fields, 'name');
+                        // FIXED: Check actual database columns, not just CCT definition
+                        $existing_names = $this->get_cct_database_columns($mapped_slug);
+                        
+                        pac_vdm_debug_log("Checking fields for CCT: {$mapped_slug}", [
+                            'role' => $role_key,
+                            'columns_found' => $existing_names,
+                            'required_fields' => array_column($role['fields'], 'name')
+                        ]);
                         
                         foreach ($role['fields'] as $field) {
                             $fields_status[$field['name']] = [
@@ -685,6 +690,81 @@ class PAC_VDM_CCT_Builder {
         }
         
         return $status;
+    }
+    
+    /**
+     * Get actual database columns for a CCT
+     *
+     * CRITICAL: For CCTs with separate DB tables, fields are COLUMNS not meta
+     *
+     * @param string $cct_slug CCT slug
+     * @return array Array of column names
+     */
+    private function get_cct_database_columns($cct_slug) {
+        global $wpdb;
+        
+        // CCT tables are named: wp_jet_cct_{slug}
+        $table_name = $wpdb->prefix . 'jet_cct_' . $cct_slug;
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table_name
+        ));
+        
+        if (!$table_exists) {
+            pac_vdm_debug_log("CCT table does not exist", ['table' => $table_name], 'warning');
+            // Fallback to CCT definition
+            return $this->get_cct_definition_fields($cct_slug);
+        }
+        
+        // Get all columns from the table
+        $columns = $wpdb->get_results($wpdb->prepare(
+            "SHOW COLUMNS FROM `{$table_name}`"
+        ), ARRAY_A);
+        
+        if (!$columns) {
+            pac_vdm_debug_log("Could not fetch columns", ['table' => $table_name], 'warning');
+            return $this->get_cct_definition_fields($cct_slug);
+        }
+        
+        $column_names = [];
+        foreach ($columns as $column) {
+            $col_name = $column['Field'];
+            // Exclude built-in CCT columns
+            if (!in_array($col_name, ['_ID', 'cct_status', 'cct_author_id', 'cct_created', 'cct_modified', 'cct_single_post_id'])) {
+                $column_names[] = $col_name;
+            }
+        }
+        
+        pac_vdm_debug_log("Fetched database columns", [
+            'table' => $table_name,
+            'columns' => $column_names
+        ]);
+        
+        return $column_names;
+    }
+    
+    /**
+     * Get fields from CCT definition (fallback)
+     *
+     * @param string $cct_slug CCT slug
+     * @return array Array of field names
+     */
+    private function get_cct_definition_fields($cct_slug) {
+        if (!class_exists('\\Jet_Engine\\Modules\\Custom_Content_Types\\Module')) {
+            return [];
+        }
+        
+        $module = \Jet_Engine\Modules\Custom_Content_Types\Module::instance();
+        $cct = $module->manager->get_content_types($cct_slug);
+        
+        if (!$cct) {
+            return [];
+        }
+        
+        $existing_fields = $cct->get_arg('fields') ?: [];
+        return array_column($existing_fields, 'name');
     }
     
     /**
