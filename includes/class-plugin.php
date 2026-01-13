@@ -46,6 +46,13 @@ class PAC_VDM_Plugin {
     public $year_expander;
     
     /**
+     * Config Name Generator instance
+     *
+     * @var PAC_VDM_Config_Name_Generator
+     */
+    public $config_name_generator;
+    
+    /**
      * Data Flattener instance
      *
      * @var PAC_VDM_Data_Flattener
@@ -97,14 +104,16 @@ class PAC_VDM_Plugin {
         
         // Data processing modules
         $this->year_expander = new PAC_VDM_Year_Expander($this->config_manager);
+        $this->config_name_generator = new PAC_VDM_Config_Name_Generator($this->config_manager);
         $this->data_flattener = new PAC_VDM_Data_Flattener($this->config_manager, $this->discovery);
         
         // UI enforcement
         $this->field_locker = new PAC_VDM_Field_Locker($this->config_manager);
         
-        // Register hooks for data processors
-        $this->year_expander->register_hooks();
-        $this->data_flattener->register_hooks();
+        // Register hooks for data processors (in priority order)
+        $this->year_expander->register_hooks();           // Priority 10
+        $this->data_flattener->register_hooks();          // Priority 15
+        $this->config_name_generator->register_hooks();   // Priority 20 (runs AFTER data pull)
         $this->field_locker->register_hooks();
         
         // Admin page (only in admin)
@@ -139,6 +148,15 @@ class PAC_VDM_Plugin {
      */
     public function get_year_expander() {
         return $this->year_expander;
+    }
+    
+    /**
+     * Get Config Name Generator instance
+     *
+     * @return PAC_VDM_Config_Name_Generator
+     */
+    public function get_config_name_generator() {
+        return $this->config_name_generator;
     }
     
     /**

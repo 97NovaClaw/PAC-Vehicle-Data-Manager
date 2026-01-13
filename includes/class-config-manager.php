@@ -32,6 +32,12 @@ class PAC_VDM_Config_Manager {
                 'end_field' => '',
                 'output_field' => '',
             ],
+            'config_name_generator' => [
+                'enabled' => false,
+                'target_cct' => '',
+                'template' => '{year_start}-{year_end} {make_name} {model_name} {generation_code}',
+                'output_field' => 'config_name',
+            ],
         ];
         
         $settings = get_option(PAC_VDM_SETTINGS_OPTION, $defaults);
@@ -303,6 +309,47 @@ class PAC_VDM_Config_Manager {
         
         if ($this->save_settings($settings)) {
             pac_vdm_debug_log('Year expander config saved', $settings['year_expander']);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get config name generator configuration
+     *
+     * @return array
+     */
+    public function get_config_name_generator_config() {
+        $settings = $this->get_settings();
+        
+        return isset($settings['config_name_generator']) ? $settings['config_name_generator'] : [
+            'enabled' => false,
+            'target_cct' => '',
+            'template' => '{year_start}-{year_end} {make_name} {model_name} {generation_code}',
+            'output_field' => 'config_name',
+        ];
+    }
+    
+    /**
+     * Save config name generator configuration
+     *
+     * @param array $config Config name generator config
+     * @return bool
+     */
+    public function save_config_name_generator_config($config) {
+        $settings = $this->get_settings();
+        
+        // Sanitize config
+        $settings['config_name_generator'] = [
+            'enabled' => !empty($config['enabled']),
+            'target_cct' => sanitize_text_field($config['target_cct'] ?? ''),
+            'template' => sanitize_text_field($config['template'] ?? ''),
+            'output_field' => sanitize_text_field($config['output_field'] ?? 'config_name'),
+        ];
+        
+        if ($this->save_settings($settings)) {
+            pac_vdm_debug_log('Config name generator config saved', $settings['config_name_generator']);
             return true;
         }
         

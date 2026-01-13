@@ -904,6 +904,20 @@ class PAC_VDM_CCT_Builder {
                 'end_field' => 'year_end',
                 'output_field' => 'year_range_list',
             ]);
+            
+            pac_vdm_debug_log('Year Expander auto-configured');
+        }
+        
+        // Auto-configure Config Name Generator if vehicle_configs is set
+        if (!empty($setup['ccts']['vehicle_configs'])) {
+            $config_manager->save_config_name_generator_config([
+                'enabled' => true,
+                'target_cct' => $setup['ccts']['vehicle_configs'],
+                'template' => '{year_start}-{year_end} {make_name} {model_name} {generation_code}',
+                'output_field' => 'config_name',
+            ]);
+            
+            pac_vdm_debug_log('Config Name Generator auto-configured');
         }
         
         pac_vdm_debug_log('Auto-created field mappings', $created_mappings);
