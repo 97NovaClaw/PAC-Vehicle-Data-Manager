@@ -119,10 +119,43 @@ class PAC_VDM_Config_Manager {
         $settings = $this->get_settings();
         $mappings = isset($settings['mappings']) ? $settings['mappings'] : [];
         
+        pac_vdm_debug_log('save_mapping called', [
+            'target_cct' => $mapping_data['target_cct'] ?? 'N/A',
+            'source_field' => $mapping_data['source_field'] ?? 'N/A',
+            'dest_field' => $mapping_data['destination_field'] ?? 'N/A',
+            'existing_count' => count($mappings)
+        ]);
+        
+        // FIXED: Check for functional duplicates (same CCT + relation + fields)
+        $duplicate_key = null;
+        foreach ($mappings as $key => $existing) {
+            if (isset($existing['target_cct']) && $existing['target_cct'] === ($mapping_data['target_cct'] ?? '') &&
+                isset($existing['trigger_relation']) && $existing['trigger_relation'] == ($mapping_data['trigger_relation'] ?? 0) &&
+                isset($existing['source_field']) && $existing['source_field'] === ($mapping_data['source_field'] ?? '') &&
+                isset($existing['destination_field']) && $existing['destination_field'] === ($mapping_data['destination_field'] ?? '')) {
+                $duplicate_key = $key;
+                pac_vdm_debug_log('Found functional duplicate', [
+                    'existing_id' => $existing['id'] ?? 'N/A',
+                    'key' => $key,
+                    'will_update' => true
+                ]);
+                break;
+            }
+        }
+        
         // Generate ID if not provided
         if (empty($mapping_data['id'])) {
-            $mapping_data['id'] = 'map_' . wp_generate_uuid4();
-            $mapping_data['created_at'] = current_time('mysql');
+            if ($duplicate_key !== null) {
+                // Reuse existing mapping's ID
+                $mapping_data['id'] = $mappings[$duplicate_key]['id'];
+                $mapping_data['created_at'] = $mappings[$duplicate_key]['created_at'] ?? current_time('mysql');
+                pac_vdm_debug_log('Reusing duplicate mapping ID', ['id' => $mapping_data['id']]);
+            } else {
+                // Generate new ID
+                $mapping_data['id'] = 'map_' . wp_generate_uuid4();
+                $mapping_data['created_at'] = current_time('mysql');
+                pac_vdm_debug_log('Generated new mapping ID', ['id' => $mapping_data['id']]);
+            }
         }
         
         // Add/update timestamp
@@ -131,27 +164,39 @@ class PAC_VDM_Config_Manager {
         // Merge with defaults
         $mapping_data = $this->merge_mapping_defaults($mapping_data);
         
-        // Find and update existing, or add new
-        $found = false;
-        foreach ($mappings as $key => $existing) {
-            if (isset($existing['id']) && $existing['id'] === $mapping_data['id']) {
-                $mappings[$key] = $mapping_data;
-                $found = true;
-                break;
+        // Update duplicate or find by ID
+        if ($duplicate_key !== null) {
+            $mappings[$duplicate_key] = $mapping_data;
+            pac_vdm_debug_log('Updated duplicate mapping', ['key' => $duplicate_key]);
+        } else {
+            // Find and update existing by ID, or add new
+            $found = false;
+            foreach ($mappings as $key => $existing) {
+                if (isset($existing['id']) && $existing['id'] === $mapping_data['id']) {
+                    $mappings[$key] = $mapping_data;
+                    $found = true;
+                    pac_vdm_debug_log('Updated mapping by ID', ['key' => $key]);
+                    break;
+                }
             }
-        }
-        
-        if (!$found) {
-            $mappings[] = $mapping_data;
+            
+            if (!$found) {
+                $mappings[] = $mapping_data;
+                pac_vdm_debug_log('Added new mapping', ['new_total' => count($mappings)]);
+            }
         }
         
         $settings['mappings'] = $mappings;
         
         if ($this->save_settings($settings)) {
-            pac_vdm_debug_log('Mapping saved', $mapping_data);
+            pac_vdm_debug_log('Mapping saved successfully', [
+                'id' => $mapping_data['id'],
+                'total_mappings' => count($mappings)
+            ], 'critical');
             return $mapping_data['id'];
         }
         
+        pac_vdm_debug_log('Failed to save settings', null, 'error');
         return false;
     }
     
