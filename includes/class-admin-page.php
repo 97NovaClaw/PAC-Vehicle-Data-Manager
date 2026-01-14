@@ -177,6 +177,10 @@ class PAC_VDM_Admin_Page {
         
         // Get setup status
         add_action('wp_ajax_pac_vdm_get_setup_status', [$this, 'ajax_get_setup_status']);
+        
+        // Bulk Sync
+        add_action('wp_ajax_pac_vdm_bulk_sync_batch', [$this, 'ajax_bulk_sync_batch']);
+        add_action('wp_ajax_pac_vdm_get_sync_status', [$this, 'ajax_get_sync_status']);
     }
     
     /**
@@ -721,6 +725,54 @@ class PAC_VDM_Admin_Page {
             'relations_status' => $cct_builder->get_relations_status(),
             'cct_roles' => $cct_builder->get_cct_roles(),
             'relation_definitions' => $cct_builder->get_relation_definitions(),
+        ]);
+    }
+    
+    /**
+     * AJAX: Process bulk sync batch
+     */
+    public function ajax_bulk_sync_batch() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $cct_slug = isset($_POST['cct_slug']) ? sanitize_text_field($_POST['cct_slug']) : '';
+        $offset = isset($_POST['offset']) ? absint($_POST['offset']) : 0;
+        
+        if (empty($cct_slug)) {
+            wp_send_json_error(['message' => __('CCT slug required', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        pac_vdm_debug_log('AJAX: Bulk sync batch request', [
+            'cct_slug' => $cct_slug,
+            'offset' => $offset,
+        ], 'critical');
+        
+        $bulk_sync = new PAC_VDM_Bulk_Sync($this->config_manager, $this->discovery);
+        $result = $bulk_sync->sync_cct_batch($cct_slug, $offset);
+        
+        wp_send_json_success($result);
+    }
+    
+    /**
+     * AJAX: Get sync status for all CCTs
+     */
+    public function ajax_get_sync_status() {
+        check_ajax_referer('pac_vdm_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized', 'pac-vehicle-data-manager')]);
+            return;
+        }
+        
+        $bulk_sync = new PAC_VDM_Bulk_Sync($this->config_manager, $this->discovery);
+        
+        wp_send_json_success([
+            'sync_status' => $bulk_sync->get_sync_status(),
         ]);
     }
 }

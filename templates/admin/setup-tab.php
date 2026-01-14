@@ -249,8 +249,9 @@ $available_ccts = $discovery->get_all_ccts();
     <p><strong><?php _e('This will automatically:', 'pac-vehicle-data-manager'); ?></strong></p>
     <ul style="list-style: disc; margin-left: 25px;">
         <li><?php _e('Create field sync mappings for make_name, model_name, generation_code, powertrain_engine, year_range_list', 'pac-vehicle-data-manager'); ?></li>
-        <li><?php _e('Configure Year Expander for Vehicle Configs CCT', 'pac-vehicle-data-manager'); ?></li>
-        <li><?php _e('Set all synced fields as read-only in the UI', 'pac-vehicle-data-manager'); ?></li>
+        <li><?php _e('Configure Year Expander for Vehicle Configs (auto-generate year arrays)', 'pac-vehicle-data-manager'); ?></li>
+        <li><?php _e('Configure Config Name Generator for Vehicle Configs (auto-generate titles)', 'pac-vehicle-data-manager'); ?></li>
+        <li><?php _e('Set synced fields as read-only, year_range_list as hidden', 'pac-vehicle-data-manager'); ?></li>
     </ul>
     
     <button type="button" id="auto-create-mappings-btn" class="button button-primary button-hero" style="margin-top: 15px;">
@@ -260,6 +261,75 @@ $available_ccts = $discovery->get_all_ccts();
     <span class="spinner" id="auto-mappings-spinner" style="float: none; margin-left: 10px;"></span>
     <span id="auto-mappings-message" style="margin-left: 10px;"></span>
 </div>
+
+<hr style="margin: 30px 0;">
+
+<h3><?php _e('Step 4: Sync Existing Data (Optional)', 'pac-vehicle-data-manager'); ?></h3>
+<p class="description"><?php _e('If you installed this plugin on an existing site with data, click below to retroactively sync all existing CCT items.', 'pac-vehicle-data-manager'); ?></p>
+
+<?php
+$bulk_sync = new PAC_VDM_Bulk_Sync($config_manager, $discovery);
+$syncable_ccts = $bulk_sync->get_syncable_ccts();
+?>
+
+<?php if (empty($syncable_ccts)): ?>
+    <div class="notice notice-info inline" style="margin: 15px 0;">
+        <p><?php _e('No existing items found to sync. This feature is only needed when installing the plugin on a site with existing data.', 'pac-vehicle-data-manager'); ?></p>
+    </div>
+<?php else: ?>
+    <table class="wp-list-table widefat fixed striped" id="bulk-sync-table">
+        <thead>
+            <tr>
+                <th style="width: 30%;"><?php _e('CCT', 'pac-vehicle-data-manager'); ?></th>
+                <th style="width: 20%;"><?php _e('Existing Items', 'pac-vehicle-data-manager'); ?></th>
+                <th style="width: 30%;"><?php _e('Status', 'pac-vehicle-data-manager'); ?></th>
+                <th style="width: 20%;"><?php _e('Actions', 'pac-vehicle-data-manager'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($syncable_ccts as $cct_slug => $cct_status): ?>
+                <tr data-cct="<?php echo esc_attr($cct_slug); ?>">
+                    <td><strong><?php echo esc_html($cct_status['name']); ?></strong></td>
+                    <td>
+                        <span class="sync-item-count"><?php echo number_format($cct_status['item_count']); ?></span> items
+                    </td>
+                    <td class="sync-status-cell">
+                        <span class="sync-status-pending"><?php _e('Ready to sync', 'pac-vehicle-data-manager'); ?></span>
+                    </td>
+                    <td>
+                        <button type="button" class="button button-secondary bulk-sync-btn"
+                                data-cct="<?php echo esc_attr($cct_slug); ?>"
+                                data-count="<?php echo esc_attr($cct_status['item_count']); ?>">
+                            <span class="dashicons dashicons-update"></span>
+                            <?php printf(__('Sync %d Items', 'pac-vehicle-data-manager'), $cct_status['item_count']); ?>
+                        </button>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    
+    <div class="bulk-sync-progress" id="bulk-sync-progress">
+        <h4 style="margin-top: 0;"><?php _e('Syncing...', 'pac-vehicle-data-manager'); ?></h4>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="sync-progress-bar" style="width: 0%;">0%</div>
+        </div>
+        <p id="sync-progress-text"><?php _e('Initializing...', 'pac-vehicle-data-manager'); ?></p>
+    </div>
+    
+    <div class="notice notice-warning inline" style="margin-top: 15px;">
+        <p>
+            <strong><?php _e('Note:', 'pac-vehicle-data-manager'); ?></strong>
+            <?php _e('Bulk sync will update all existing items in the selected CCT. This will:', 'pac-vehicle-data-manager'); ?>
+        </p>
+        <ul style="list-style: disc; margin-left: 25px;">
+            <li><?php _e('Pull parent data into synced fields', 'pac-vehicle-data-manager'); ?></li>
+            <li><?php _e('Generate year_range_list from year_start/year_end', 'pac-vehicle-data-manager'); ?></li>
+            <li><?php _e('Generate config_name from template', 'pac-vehicle-data-manager'); ?></li>
+            <li><?php _e('Process in batches to avoid timeouts', 'pac-vehicle-data-manager'); ?></li>
+        </ul>
+    </div>
+<?php endif; ?>
 
 <style>
 /* Setup Tab Styles */

@@ -200,6 +200,7 @@ function pac_vdm_init() {
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-config-name-generator.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-data-flattener.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-field-locker.php';
+        require_once PAC_VDM_PLUGIN_DIR . 'includes/class-bulk-sync.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-admin-page.php';
         require_once PAC_VDM_PLUGIN_DIR . 'includes/class-plugin.php';
         

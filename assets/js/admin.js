@@ -51,6 +51,7 @@
             $(document).on('click', '.create-relation-btn', this.createRelation.bind(this));
             $(document).on('click', '#create-all-relations-btn', this.createAllRelations.bind(this));
             $(document).on('click', '#auto-create-mappings-btn', this.autoCreateMappings.bind(this));
+            $(document).on('click', '.bulk-sync-btn', this.startBulkSync.bind(this));
             
             // Mappings - DELEGATED
             $(document).on('click', '#add-mapping-btn', this.addMappingRow.bind(this));
@@ -871,6 +872,102 @@
                 complete: () => {
                     $btn.prop('disabled', false);
                     $spinner.removeClass('is-active');
+                }
+            });
+        },
+        
+        /**
+         * Start bulk sync for a CCT
+         */
+        startBulkSync: function(e) {
+            e.preventDefault();
+            
+            const $btn = $(e.currentTarget);
+            const cctSlug = $btn.data('cct');
+            const totalCount = parseInt($btn.data('count'));
+            
+            if (!confirm('Sync ' + totalCount + ' existing items? This will update all items with parent data, year ranges, and config names.')) {
+                return;
+            }
+            
+            console.log('[PAC VDM Admin] Starting bulk sync for: ' + cctSlug);
+            
+            // Disable all sync buttons
+            $('.bulk-sync-btn').prop('disabled', true);
+            
+            // Show progress
+            $('#bulk-sync-progress').addClass('active');
+            $('#sync-progress-bar').css('width', '0%').text('0%');
+            $('#sync-progress-text').text('Starting sync...');
+            
+            // Start batch processing
+            this.processBulkSyncBatch(cctSlug, 0, totalCount);
+        },
+        
+        /**
+         * Process a batch of items
+         */
+        processBulkSyncBatch: function(cctSlug, offset, totalCount) {
+            const self = this;
+            
+            $.ajax({
+                url: this.config.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'pac_vdm_bulk_sync_batch',
+                    nonce: this.config.nonce,
+                    cct_slug: cctSlug,
+                    offset: offset
+                },
+                success: (response) => {
+                    if (response.success) {
+                        const result = response.data;
+                        const processed = offset + result.processed;
+                        const percentComplete = Math.round((processed / totalCount) * 100);
+                        
+                        // Update progress
+                        $('#sync-progress-bar').css('width', percentComplete + '%').text(percentComplete + '%');
+                        $('#sync-progress-text').text(
+                            'Processed ' + processed + ' of ' + totalCount + ' items (' + 
+                            result.success + ' success, ' + result.errors + ' errors)'
+                        );
+                        
+                        console.log('[PAC VDM Bulk Sync] Batch complete', result);
+                        
+                        // If there are more items, process next batch
+                        if (result.has_more) {
+                            setTimeout(() => {
+                                self.processBulkSyncBatch(cctSlug, result.next_offset, totalCount);
+                            }, 500); // Small delay to prevent overwhelming server
+                        } else {
+                            // All done!
+                            $('#sync-progress-text').html(
+                                '<strong style="color: #46b450;">✓ Sync complete!</strong> ' +
+                                'Processed ' + processed + ' items (' + result.success + ' success, ' + result.errors + ' errors)'
+                            );
+                            
+                            // Update status in table
+                            const $row = $('[data-cct="' + cctSlug + '"]');
+                            $row.find('.sync-status-cell').html(
+                                '<span style="color: #46b450;"><span class="dashicons dashicons-yes-alt"></span> Synced</span>'
+                            );
+                            
+                            // Re-enable buttons
+                            setTimeout(() => {
+                                $('.bulk-sync-btn').prop('disabled', false);
+                                $('#bulk-sync-progress').removeClass('active');
+                            }, 3000);
+                        }
+                    } else {
+                        alert('Error: ' + (response.data.message || 'Unknown error'));
+                        $('.bulk-sync-btn').prop('disabled', false);
+                        $('#bulk-sync-progress').removeClass('active');
+                    }
+                },
+                error: () => {
+                    alert('AJAX error during bulk sync');
+                    $('.bulk-sync-btn').prop('disabled', false);
+                    $('#bulk-sync-progress').removeClass('active');
                 }
             });
         },
