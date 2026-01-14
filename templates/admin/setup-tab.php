@@ -18,6 +18,7 @@ $mapping_status = $cct_builder->get_mapping_status();
 $relations_status = $cct_builder->get_relations_status();
 $discovery = new PAC_VDM_Discovery();
 $available_ccts = $discovery->get_all_ccts();
+$config_manager = new PAC_VDM_Config_Manager();
 ?>
 
 <div class="tab-header">
