@@ -45,9 +45,11 @@ class PAC_VDM_Data_Flattener {
     
     /**
      * Register hooks for data flattening
+     *
+     * UPDATED: Added created-item hooks to work with Relation Injector on FIRST save
      */
     public function register_hooks() {
-        // PULL: Hook into item-to-update filter to inject parent data before save
+        // PULL: Hook into item-to-update filter to inject parent data before save (EXISTING items)
         add_filter(
             'jet-engine/custom-content-types/item-to-update',
             [$this, 'process_pull_data'],
@@ -55,10 +57,33 @@ class PAC_VDM_Data_Flattener {
             3
         );
         
+        // PULL (NEW ITEMS): Hook into created-item to sync after Relation Injector
+        $this->register_created_item_hooks();
+        
         // PUSH: Register post-save hooks for each mapped CCT
         $this->register_push_hooks();
         
         pac_vdm_debug_log('Data Flattener hooks registered');
+    }
+    
+    /**
+     * Register created-item hooks for NEW items (works with Relation Injector)
+     */
+    private function register_created_item_hooks() {
+        $mapped_ccts = $this->config_manager->get_mapped_ccts();
+        
+        foreach ($mapped_ccts as $cct_slug) {
+            add_action(
+                "jet-engine/custom-content-types/created-item/{$cct_slug}",
+                function($item, $item_id, $handler) use ($cct_slug) {
+                    $this->sync_new_item_with_parent($item, $item_id, $handler, $cct_slug);
+                },
+                25, // AFTER Relation Injector (priority 10) - relations are saved by now
+                3
+            );
+            
+            pac_vdm_debug_log("Registered created-item hook for: {$cct_slug}");
+        }
     }
     
     /**
@@ -443,6 +468,123 @@ class PAC_VDM_Data_Flattener {
         ]);
         
         return $result !== false;
+    }
+    
+    /**
+     * Sync parent data to newly created item
+     *
+     * CRITICAL: Runs at priority 25, AFTER Relation Injector (priority 10)
+     * This makes data sync work on FIRST save!
+     *
+     * @param array  $item     Saved item data
+     * @param int    $item_id  Item ID (now exists!)
+     * @param object $handler  Item handler
+     * @param string $cct_slug CCT slug
+     */
+    private function sync_new_item_with_parent($item, $item_id, $handler, $cct_slug) {
+        global $wpdb;
+        
+        pac_vdm_debug_log('🔥 created-item hook fired for new item', [
+            'cct_slug' => $cct_slug,
+            'item_id' => $item_id,
+            'has_post_injector_data' => isset($_POST['jet_injector_relations_data']),
+        ], 'critical');
+        
+        // Get mappings for this CCT
+        $mappings = $this->config_manager->get_mappings_for_cct($cct_slug, true);
+        
+        if (empty($mappings)) {
+            pac_vdm_debug_log('No mappings for CCT, skipping sync');
+            return;
+        }
+        
+        $fields_to_update = [];
+        
+        foreach ($mappings as $mapping) {
+            // Only process PULL or BOTH directions
+            if (!in_array($mapping['direction'] ?? 'pull', ['pull', 'both'])) {
+                continue;
+            }
+            
+            $relation_id = $mapping['trigger_relation'];
+            $source_field = $mapping['source_field'];
+            $dest_field = $mapping['destination_field'];
+            
+            // Query relations table to find parent
+            $relation_table = $wpdb->prefix . 'jet_rel_' . $relation_id;
+            
+            $parent_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT parent_object_id FROM `{$relation_table}` WHERE child_object_id = %d LIMIT 1",
+                $item_id
+            ));
+            
+            if (!$parent_id) {
+                pac_vdm_debug_log('No parent relation found in database yet', [
+                    'relation_id' => $relation_id,
+                    'child_id' => $item_id,
+                ]);
+                continue;
+            }
+            
+            // Get parent CCT data
+            $relation = $this->discovery->get_relation($relation_id);
+            if (!$relation) {
+                continue;
+            }
+            
+            $parsed_parent = $this->discovery->parse_relation_object($relation['parent_object']);
+            if ($parsed_parent['type'] !== 'cct') {
+                continue;
+            }
+            
+            $parent_cct_slug = $parsed_parent['slug'];
+            $parent_table = $wpdb->prefix . 'jet_cct_' . $parent_cct_slug;
+            
+            // Fetch parent field value
+            $parent_value = $wpdb->get_var($wpdb->prepare(
+                "SELECT `{$source_field}` FROM `{$parent_table}` WHERE _ID = %d",
+                $parent_id
+            ));
+            
+            if ($parent_value !== null) {
+                $fields_to_update[$dest_field] = $parent_value;
+                
+                pac_vdm_debug_log('🎯 FIRST-SAVE SYNC: Found parent data', [
+                    'source_field' => $source_field,
+                    'dest_field' => $dest_field,
+                    'value' => $parent_value,
+                    'parent_id' => $parent_id,
+                ], 'critical');
+            }
+        }
+        
+        // Perform direct database update if we have fields to sync
+        if (!empty($fields_to_update)) {
+            $child_table = $wpdb->prefix . 'jet_cct_' . $cct_slug;
+            
+            $result = $wpdb->update(
+                $child_table,
+                $fields_to_update,
+                ['_ID' => $item_id],
+                null, // Let wpdb determine format
+                ['%d']
+            );
+            
+            if ($result !== false) {
+                pac_vdm_debug_log('✅ FIRST-SAVE SYNC COMPLETE: Parent data synced on first save!', [
+                    'item_id' => $item_id,
+                    'cct_slug' => $cct_slug,
+                    'fields_synced' => array_keys($fields_to_update),
+                    'values' => $fields_to_update,
+                ], 'critical');
+            } else {
+                pac_vdm_debug_log('Database update failed', [
+                    'error' => $wpdb->last_error,
+                ], 'error');
+            }
+        } else {
+            pac_vdm_debug_log('No fields to sync for new item (no parent found)');
+        }
     }
     
     /**
